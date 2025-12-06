@@ -40,8 +40,8 @@ namespace LogViewerApp
                 try
                 {
                     var lines = File.ReadAllLines(file);
-                    string buffer = "";
-                    int openBraces = 0;
+                    var buffer = "";
+                    var openBraces = 0;
 
                     foreach (var line in lines)
                     {
@@ -49,16 +49,18 @@ namespace LogViewerApp
                         openBraces += line.Count(c => c == '{');
                         openBraces -= line.Count(c => c == '}');
 
-                        if (openBraces == 0 && !string.IsNullOrWhiteSpace(buffer))
+                        if (openBraces != 0 || string.IsNullOrWhiteSpace(buffer))
                         {
-                            var entry = ParseLineToEntry(buffer);
-                            if (entry != null)
-                            {
-                                _allLogs.Add(entry);
-                            }
-
-                            buffer = "";
+                            continue;
                         }
+
+                        var entry = ParseLineToEntry(buffer);
+                        if (entry != null)
+                        {
+                            _allLogs.Add(entry);
+                        }
+
+                        buffer = "";
                     }
                 }
                 catch (Exception ex)
@@ -98,10 +100,17 @@ namespace LogViewerApp
 
         private static LogLevel DetectLevel(string line)
         {
-            if (line.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0) return LogLevel.Error;
-            if (line.IndexOf("WARN", StringComparison.OrdinalIgnoreCase) >= 0) return LogLevel.Warning;
-            if (line.IndexOf("DEBUG", StringComparison.OrdinalIgnoreCase) >= 0) return LogLevel.Debug;
-            return LogLevel.Info;
+            if (line.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return LogLevel.Error;
+            }
+
+            if (line.IndexOf("WARN", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return LogLevel.Warning;
+            }
+
+            return line.IndexOf("DEBUG", StringComparison.OrdinalIgnoreCase) >= 0 ? LogLevel.Debug : LogLevel.Info;
         }
 
         private void RefreshDisplay(IEnumerable<LogEntry> entries, string[]? highlightTerms = null)
@@ -113,14 +122,7 @@ namespace LogViewerApp
 
             foreach (var e in pinned.Concat(others))
             {
-                if (highlightTerms != null && highlightTerms.Length > 0)
-                {
-                    e.IsMatched = highlightTerms.Any(t => e.Text.IndexOf(t, StringComparison.OrdinalIgnoreCase) >= 0);
-                }
-                else
-                {
-                    e.IsMatched = false;
-                }
+                e.IsMatched = highlightTerms is { Length: > 0 } && highlightTerms.Any(t => e.Text.IndexOf(t, StringComparison.OrdinalIgnoreCase) >= 0);
 
                 e.UpdateBrushes();
                 _displayedLogs.Add(e);
@@ -131,10 +133,10 @@ namespace LogViewerApp
 
         private void RefreshStats()
         {
-            int total = _allLogs.Count;
-            int info = _allLogs.Count(x => x.Level == LogLevel.Info);
-            int warn = _allLogs.Count(x => x.Level == LogLevel.Warning);
-            int error = _allLogs.Count(x => x.Level == LogLevel.Error);
+            var total = _allLogs.Count;
+            var info = _allLogs.Count(x => x.Level == LogLevel.Info);
+            var warn = _allLogs.Count(x => x.Level == LogLevel.Warning);
+            var error = _allLogs.Count(x => x.Level == LogLevel.Error);
 
             TxtTotal.Text = $"Total: {total}";
             TxtInfo.Text = $"Info: {info}";
@@ -173,15 +175,7 @@ namespace LogViewerApp
             var terms = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var mode = ((ComboBoxItem)SearchModeCombo.SelectedItem).Content?.ToString() ?? "AND";
 
-            IEnumerable<LogEntry> result;
-            if (mode == "AND")
-            {
-                result = _allLogs.Where(l => terms.All(t => l.Text.IndexOf(t, StringComparison.OrdinalIgnoreCase) >= 0));
-            }
-            else
-            {
-                result = _allLogs.Where(l => terms.Any(t => l.Text.IndexOf(t, StringComparison.OrdinalIgnoreCase) >= 0));
-            }
+            var result = mode == "AND" ? _allLogs.Where(l => terms.All(t => l.Text.IndexOf(t, StringComparison.OrdinalIgnoreCase) >= 0)) : _allLogs.Where(l => terms.Any(t => l.Text.IndexOf(t, StringComparison.OrdinalIgnoreCase) >= 0));
 
             RefreshDisplay(result, terms);
             StatusText.Text = $"검색: {terms.Length}개 키워드, {result.Count()} 라인";
@@ -198,22 +192,24 @@ namespace LogViewerApp
 
         private void BtnStats_Click(object sender, RoutedEventArgs e)
         {
-            int total = _allLogs.Count;
-            int info = _allLogs.Count(x => x.Level == LogLevel.Info);
-            int warn = _allLogs.Count(x => x.Level == LogLevel.Warning);
-            int error = _allLogs.Count(x => x.Level == LogLevel.Error);
+            var total = _allLogs.Count;
+            var info = _allLogs.Count(x => x.Level == LogLevel.Info);
+            var warn = _allLogs.Count(x => x.Level == LogLevel.Warning);
+            var error = _allLogs.Count(x => x.Level == LogLevel.Error);
 
             MessageBox.Show($"Total: {total}\nInfo: {info}\nWarn: {warn}\nError: {error}", "통계", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void PinButton_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button btn && btn.DataContext is LogEntry entry)
+            if (sender is not Button { DataContext: LogEntry entry })
             {
-                entry.IsPinned = !entry.IsPinned;
-                entry.UpdateBrushes();
-                RefreshDisplay(_displayedLogs.Union(_allLogs).Distinct());
+                return;
             }
+
+            entry.IsPinned = !entry.IsPinned;
+            entry.UpdateBrushes();
+            RefreshDisplay(_displayedLogs.Union(_allLogs).Distinct());
         }
 
         private void BtnShowPinnedOnly_Click(object sender, RoutedEventArgs e)
@@ -252,10 +248,10 @@ namespace LogViewerApp
             {
                 using (var writer = new StreamWriter(dlg.FileName))
                 {
-                    writer.WriteLine($"=== 로그 내보내기 ===");
+                    writer.WriteLine("=== 로그 내보내기 ===");
                     writer.WriteLine($"내보낸 시간: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
                     writer.WriteLine($"총 로그 수: {_displayedLogs.Count}");
-                    writer.WriteLine($"===================================");
+                    writer.WriteLine("===================================");
                     writer.WriteLine();
 
                     foreach (var log in _displayedLogs)
@@ -291,9 +287,8 @@ namespace LogViewerApp
         public bool IsMatched { get; set; }
 
         public string DisplayText => Text;
-        public SolidColorBrush ForegroundBrush { get; private set; } = new SolidColorBrush(Colors.White);
-        public SolidColorBrush BackgroundBrush { get; private set; } = new SolidColorBrush(Colors.Transparent);
-        public SolidColorBrush PinColor => IsPinned ? new SolidColorBrush(Colors.Gold) : new SolidColorBrush(Colors.Gray);
+        public SolidColorBrush ForegroundBrush { get; private set; } = new(Colors.White);
+        public SolidColorBrush BackgroundBrush { get; private set; } = new(Colors.Transparent);
 
         public LogEntry(string text, LogLevel level, DateTime timestamp)
         {
@@ -305,14 +300,14 @@ namespace LogViewerApp
 
         public void UpdateBrushes()
         {
-            Color fg = Colors.White;
-            switch (Level)
+            var fg = Level switch
             {
-                case LogLevel.Info: fg = Colors.LightGreen; break;
-                case LogLevel.Warning: fg = Colors.Khaki; break;
-                case LogLevel.Error: fg = Colors.LightCoral; break;
-                case LogLevel.Debug: fg = Colors.LightBlue; break;
-            }
+                LogLevel.Info => Colors.LightGreen,
+                LogLevel.Warning => Colors.Khaki,
+                LogLevel.Error => Colors.LightCoral,
+                LogLevel.Debug => Colors.LightBlue,
+                _ => Colors.White
+            };
             ForegroundBrush = new SolidColorBrush(fg);
 
             if (IsPinned)
