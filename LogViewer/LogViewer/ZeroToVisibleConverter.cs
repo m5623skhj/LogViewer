@@ -8,16 +8,12 @@ namespace LogViewerApp
     {
         public object Convert(object? value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is int i)
+            return value switch
             {
-                return i == 0 ? Visibility.Visible : Visibility.Collapsed;
-            }
-            if (value is double d)
-            {
-                return Math.Abs(d) < 1e-9 ? Visibility.Visible : Visibility.Collapsed;
-            }
-
-            return Visibility.Visible;
+                int i => i == 0 ? Visibility.Visible : Visibility.Collapsed,
+                double d => Math.Abs(d) < 1e-9 ? Visibility.Visible : Visibility.Collapsed,
+                _ => Visibility.Visible
+            };
         }
 
         public object ConvertBack(object? value, Type targetType, object parameter, CultureInfo culture)
