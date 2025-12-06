@@ -60,6 +60,7 @@
                 <Button Content="초기화" Width="80" Margin="8,0,0,0" Click="BtnClearFilter_Click"/>
             </StackPanel>
             <Button Content="통계 보기" Click="BtnStats_Click" Margin="0,6,0,6"/>
+            <Button Content="필터 로그 내보내기" Click="BtnExport_Click" Margin="0,6,0,6"/>
             <Separator Margin="0,6,0,6"/>
             <TextBlock Text="즐겨찾기" FontWeight="Bold" Margin="0,0,0,6"/>
             <Button Content="핀 항목만 보기" Click="BtnShowPinnedOnly_Click" Margin="0,0,0,6"/>

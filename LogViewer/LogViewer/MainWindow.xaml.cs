@@ -228,6 +228,58 @@ namespace LogViewerApp
             RefreshDisplay(_allLogs);
             StatusText.Text = "전체 표시";
         }
+
+        private void BtnExport_Click(object sender, RoutedEventArgs e)
+        {
+            if (_displayedLogs.Count == 0)
+            {
+                MessageBox.Show("내보낼 로그가 없습니다.", "알림", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dlg = new SaveFileDialog
+            {
+                Filter = "Log files (*.log)|*.log|Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                FileName = $"exported_logs_{DateTime.Now:yyyyMMdd_HHmmss}.log"
+            };
+
+            if (dlg.ShowDialog() != true)
+            {
+                return;
+            }
+
+            try
+            {
+                using (var writer = new StreamWriter(dlg.FileName))
+                {
+                    writer.WriteLine($"=== 로그 내보내기 ===");
+                    writer.WriteLine($"내보낸 시간: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                    writer.WriteLine($"총 로그 수: {_displayedLogs.Count}");
+                    writer.WriteLine($"===================================");
+                    writer.WriteLine();
+
+                    foreach (var log in _displayedLogs)
+                    {
+                        var pinMark = log.IsPinned ? "[📌] " : "";
+                        var levelMark = log.Level switch
+                        {
+                            LogLevel.Error => "[ERROR] ",
+                            LogLevel.Warning => "[WARN]  ",
+                            LogLevel.Debug => "[DEBUG] ",
+                            _ => "[INFO]  "
+                        };
+                        writer.WriteLine($"{pinMark}{levelMark}{log.Text}");
+                    }
+                }
+
+                MessageBox.Show($"로그를 성공적으로 내보냈습니다.\n파일: {dlg.FileName}\n총 {_displayedLogs.Count}개 라인", "내보내기 완료", MessageBoxButton.OK, MessageBoxImage.Information);
+                StatusText.Text = $"로그 내보내기 완료: {_displayedLogs.Count}개 라인";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"파일 저장 중 오류 발생:\n{ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
     }
 
     public class LogEntry
