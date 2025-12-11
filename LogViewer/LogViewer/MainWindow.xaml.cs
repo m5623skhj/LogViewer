@@ -1,5 +1,4 @@
 ﻿using Microsoft.Win32;
-using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -11,8 +10,8 @@ namespace LogViewerApp
 {
     public partial class MainWindow : Window
     {
-        private readonly List<LogEntry> _allLogs = new();
-        private readonly ObservableCollection<LogEntry> _displayedLogs = new();
+        private readonly List<LogEntry> _allLogs = [];
+        private readonly ObservableCollection<LogEntry> _displayedLogs = [];
 
         public MainWindow()
         {
